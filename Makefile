@@ -4,7 +4,10 @@ LFLAGS = -Wall -Wextra -pthread
 
 .PHONY: all clean
 
-all: lookup queueTest pthread-hello
+all: multi-lookup
+
+multi-lookup: multi-lookup.o queue.o util.o
+	$(CC) $(LFLAGS) $^ -o $@
 
 lookup: lookup.o queue.o util.o
 	$(CC) $(LFLAGS) $^ -o $@
@@ -31,7 +34,16 @@ pthread-hello.o: pthread-hello.c
 	$(CC) $(CFLAGS) $<
 
 clean:
-	rm -f lookup queueTest pthread-hello
+	rm -f multi-lookup lookup queueTest pthread-hello
 	rm -f *.o
 	rm -f *~
 	rm -f results.txt
+
+run: lookup
+		./lookup input/name*.txt results-ref.txt
+
+run-multi: multi-lookup
+		./multi-lookup input/names*.txt results-ref.txt
+
+test-multi: multi-lookup
+		valgrind ./multi-lookup input/names*.txt results-ref.txt
