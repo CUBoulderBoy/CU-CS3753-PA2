@@ -23,7 +23,7 @@ typedef struct {
     queue* req_queue;
 
     //Pointer to output file
-    File* outputfp
+    FILE* outputfp;
 
     //Pointer to queue mutex
     pthread_mutex_t* que_mutex;

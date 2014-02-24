@@ -7,16 +7,17 @@
  * Description: Program allowing multi-threaded lookup for domain name to IP addresses
  */
 
-#include "multi-lookup.h"
-#include "queue.h"
-#include "util.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
 #include <time.h>
+#include <stdbool.h>
+
+#include "queue.h"
+#include "util.h"
+#include "multi-lookup.h"
 
 #define MINARGS 3
 #define MAXARGS 12
@@ -26,6 +27,8 @@
 #define MAX_RESOLVER_THREADS 10
 #define MAX_REQUESTER_THREADS 10
 
+bool input_done = false;
+
 int main(int argc, char *argv[]){
 	/* Check Arguments */
     if(argc < MINARGS){
@@ -34,7 +37,7 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "Usage:\n %s %s\n", argv[0], USAGE);
 		return EXIT_FAILURE;
     }
-    if(argc > MINARGS){
+    if(argc > MAXARGS){
     	//If there are more than 10 input files, error out
 		fprintf(stderr, "To Many Arguments: %d\n", (argc - 1));
 		fprintf(stderr, "Usage:\n %s %s\n", argv[0], USAGE);
@@ -42,6 +45,7 @@ int main(int argc, char *argv[]){
     }
 
     /* Create Thread Pools */
+    int i;
     int rc;
     int req_size = argc-2;
     pthread_t req_threads[req_size];
@@ -52,7 +56,7 @@ int main(int argc, char *argv[]){
     srand((unsigned) time(&t));
 
     /* Open and Protect Output File */
-    output = NULL;
+    FILE* output = NULL;
     output = fopen(argv[(argc-1)], "w");
     if(!output){
 		perror("Error Opening Output File");
@@ -66,11 +70,11 @@ int main(int argc, char *argv[]){
     pthread_mutex_t que_mutex = PTHREAD_MUTEX_INITIALIZER;
 
     /* Spawn Requester Threads */
-    requester_thread_args req_pool[req_size]
-    for (int i = 0; i < req_size; i++){
+    requester_thread_args req_pool[req_size];
+    for (i = 0; i < req_size; i++){
     	//Set vars in struct to proper arguements
     	//Will all be same except file name
-    	req_pool[i].queue = &mut_queue;
+    	req_pool[i].req_queue = &mut_queue;
     	req_pool[i].file_name = argv[i+1];
     	req_pool[i].que_mutex = &que_mutex;
 
@@ -86,14 +90,14 @@ int main(int argc, char *argv[]){
     resolver_thread_args res_pool;
     
     //Set vars for all resolver threads
-    res_pool.queue = &mut_queue;
-    res_pool.output = &output;
+    res_pool.req_queue = &mut_queue;
+    res_pool.outputfp = output;
     res_pool.que_mutex = &que_mutex;
     res_pool.out_mutex = &out_mutex;
 
     //Create all resolver threads
     for (i = 0; i < MAX_RESOLVER_THREADS; i++){
-    	rc = pthread_create(&(res_threads[i]), NULL, Resolver, (void *)&res_pool);
+    	rc = pthread_create(&(res_threads[i]), NULL, resolver, (void *)&res_pool);
     	if (rc){
     	    printf("ERROR; return code from pthread_create() is %d\n", rc);
     	    exit(EXIT_FAILURE);
@@ -101,7 +105,7 @@ int main(int argc, char *argv[]){
     }
 
     /* Join requester threads */
-    for (i = 0, i < req_size, i++){
+    for (i = 0; i < req_size; i++){
     	rc = pthread_join(req_threads[i], NULL);
 
     	//If a thread join error occurs, print the error
@@ -112,7 +116,7 @@ int main(int argc, char *argv[]){
     input_done = true;
 
     /* Join resolver threads */
-    for (i = 0, i < MAX_RESOLVER_THREADS, i++){
+    for (i = 0; i < MAX_RESOLVER_THREADS; i++){
     	rc = pthread_join(res_threads[i], NULL);
 
     	//If a thread join error occurs, print the error
@@ -122,7 +126,7 @@ int main(int argc, char *argv[]){
     }
 
     /* Once all threads finish, clean up on exit */
-    fclose(outputfp);
+    fclose(output);
 
     //Destroy queue and mutexes
     queue_cleanup(&mut_queue);
@@ -140,7 +144,7 @@ void* requester(void* input){
 	FILE* inputfp = NULL;
 
 	//Open input file as read
-	inputfp = fopen(file_name, "r");
+	inputfp = fopen(args->file_name, "r");
 
 	//Error if invalid file name
 	if(!inputfp){
@@ -162,7 +166,7 @@ void* requester(void* input){
 			//Test if the queue is already full, if it is then remove the
 			//mutex lock and sleep for a random time.
 			if(queue_is_full(args->req_queue)) {
-				pthread_mutex_unlock(args->req_queue);
+				pthread_mutex_unlock(args->que_mutex);
 				sleep();
 			}
 			//If not full, then process with queue write
@@ -190,7 +194,7 @@ void* requester(void* input){
     return NULL;
 }
 
-void* resolver(void* ouput){
+void* resolver(void* output){
 	resolver_thread_args* args = output;
 
 	while(1) {
@@ -224,7 +228,7 @@ void* resolver(void* ouput){
 
 		}
 		else {
-			if(request_queue_finished){
+			if(input_done){
 				return NULL;
 			}
 			else{
@@ -235,7 +239,7 @@ void* resolver(void* ouput){
 	return NULL;
 }
 
-void* sleep(){
+void sleep(){
 	//Get random sleep time between 0 and 100 milliseconds
 	long nsec = (long)(rand() % 100);
 	nsec = nsec * 1000000L;
