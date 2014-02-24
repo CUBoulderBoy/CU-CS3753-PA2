@@ -34,45 +34,45 @@ int main(int argc, char* argv[]){
     
     /* Check Arguments */
     if(argc < MINARGS){
-	fprintf(stderr, "Not enough arguments: %d\n", (argc - 1));
-	fprintf(stderr, "Usage:\n %s %s\n", argv[0], USAGE);
-	return EXIT_FAILURE;
+		fprintf(stderr, "Not enough arguments: %d\n", (argc - 1));
+		fprintf(stderr, "Usage:\n %s %s\n", argv[0], USAGE);
+		return EXIT_FAILURE;
     }
 
     /* Open Output File */
     outputfp = fopen(argv[(argc-1)], "w");
     if(!outputfp){
-	perror("Error Opening Output File");
-	return EXIT_FAILURE;
+		perror("Error Opening Output File");
+		return EXIT_FAILURE;
     }
 
     /* Loop Through Input Files */
     for(i=1; i<(argc-1); i++){
 	
-	/* Open Input File */
-	inputfp = fopen(argv[i], "r");
-	if(!inputfp){
-	    sprintf(errorstr, "Error Opening Input File: %s", argv[i]);
-	    perror(errorstr);
-	    break;
-	}	
+		/* Open Input File */
+		inputfp = fopen(argv[i], "r");
+		if(!inputfp){
+		    sprintf(errorstr, "Error Opening Input File: %s", argv[i]);
+		    perror(errorstr);
+		    break;
+		}	
 
-	/* Read File and Process*/
-	while(fscanf(inputfp, INPUTFS, hostname) > 0){
-	
-	    /* Lookup hostname and get IP string */
-	    if(dnslookup(hostname, firstipstr, sizeof(firstipstr))
-	       == UTIL_FAILURE){
-		fprintf(stderr, "dnslookup error: %s\n", hostname);
-		strncpy(firstipstr, "", sizeof(firstipstr));
-	    }
-	
-	    /* Write to Output File */
-	    fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
-	}
+		/* Read File and Process*/
+		while(fscanf(inputfp, INPUTFS, hostname) > 0){
+		
+		    /* Lookup hostname and get IP string */
+		    if(dnslookup(hostname, firstipstr, sizeof(firstipstr))
+		       == UTIL_FAILURE){
+				fprintf(stderr, "dnslookup error: %s\n", hostname);
+				strncpy(firstipstr, "", sizeof(firstipstr));
+		    }
+		
+		    /* Write to Output File */
+		    fprintf(outputfp, "%s,%s\n", hostname, firstipstr);
+		}
 
-	/* Close Input File */
-	fclose(inputfp);
+		/* Close Input File */
+		fclose(inputfp);
     }
 
     /* Close Output File */
