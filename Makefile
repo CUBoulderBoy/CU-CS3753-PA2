@@ -19,10 +19,15 @@ clean:
 	rm -f multi-lookup lookup queueTest pthread-hello
 	rm -f *.o
 	rm -f *~
-	rm -f results.txt
+	rm -f output.txt
 
-run-multi: multi-lookup
-		./multi-lookup input/names*.txt results-ref.txt
+clean-output:
+	rm -f output.txt
 
-test-multi: multi-lookup
-		valgrind ./multi-lookup input/names*.txt results-ref.txt
+run-multi-lookup: multi-lookup
+		rm -f output.txt
+		./multi-lookup input/names*.txt output.txt
+
+test-multi-lookup: multi-lookup
+		rm -f output.txt
+		valgrind ./multi-lookup input/names*.txt output.txt

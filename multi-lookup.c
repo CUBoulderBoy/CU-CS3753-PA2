@@ -2,8 +2,8 @@
  * File: multi-lookup.c
  * Author: Christopher Jordan
  * Project: CSCI 3753 Programming Assignment 2
- * Create Date: 2014/02/22
- * Modify Date: 2014/02/22
+ * Create Date: 02/22/2014
+ * Modify Date: 02/26/2014
  * Description: Program allowing multi-threaded lookup for domain name to IP addresses
  */
 
@@ -209,7 +209,11 @@ void* resolver(void* output){
 
 		if (hostnameptr) {
 			char hostname[SBUFSIZE];
+
+			//Copy into var hostname
 			sprintf(hostname, "%s", hostnameptr);
+			
+			//Free malloced memory
 			free(hostnameptr);
 
 			char IP_str[INET6_ADDRSTRLEN];
